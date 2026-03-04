@@ -1,0 +1,43 @@
+# Discord LLM Middleware Configuration
+# Copy this to config.yaml and customize
+
+# Discord Bot Token
+bot_token: "YOUR_BOT_TOKEN_HERE"
+
+# LLM Configuration
+llm_endpoint: "http://localhost:11434/api/generate"
+llm_api_key: ""  # Optional, for Ollama leave empty
+
+# Server whitelist (Discord server IDs)
+# Leave empty to allow all servers, or list specific IDs
+allowed_servers:
+  - "123456789012345678"
+  - "987654321098765432"
+
+# Channel whitelist (Discord channel IDs)
+# Leave empty to allow all channels, or list specific IDs
+allowed_channels:
+  - "111222333444555666"
+  - "666555444333222111"
+
+# Rate limiting (per user)
+rate_limit:
+  requests_per_minute: 10  # Sustained rate
+  burst_limit: 20          # Allow bursts up to this
+
+# Block patterns (regex)
+# These patterns will block messages matching them
+block_patterns:
+  # Spam patterns
+  - "(?i)(buy.*followers|get.*rich.*quick|frees?.*bitcoin)"
+  # Malicious URLs
+  - "(?i)(bit\\.ly|tinyurl\\.com|bit\\.do).*"
+  # Token/key patterns
+  - "(?i)(api[_-]?key|password|secret)[\\s:=]+[\\w-]{8,}"
+
+# Content moderation
+moderation:
+  enabled: false  # Set to true to enable
+  api_key: ""    # Your moderation API key (OpenAI, etc.)
+  block_threshold: 0.9  # Block if score >= this
+  flag_threshold: 0.7   # Flag if score >= this

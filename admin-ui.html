@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Middleware Admin</title>
+    <style>
+        :root {
+            --discord-bg: #313338;
+            --discord-dark: #2b2d31;
+            --discord-darker: #1e1f22;
+            --discord-light: #b5bac1;
+            --discord-accent: #5865f2;
+            --discord-green: #23a55a;
+            --discord-red: #da373c;
+            --discord-yellow: #f0b232;
+            --discord-gray: #949ba4;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Whitney', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background: var(--discord-darker);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        h1 .icon {
+            width: 32px;
+            height: 32px;
+            background: var(--discord-accent);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .subtitle {
+            color: var(--discord-gray);
+            margin-bottom: 24px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--discord-dark);
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid #3f4147;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #3f4147;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-title .icon {
+            font-size: 16px;
+            opacity: 0.7;
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            color: var(--discord-light);
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--discord-darker);
+            border: 1px solid #3f4147;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--discord-accent);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: var(--discord-accent);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: #4752c4;
+        }
+
+        .btn-success {
+            background: var(--discord-green);
+            color: #fff;
+        }
+
+        .btn-success:hover {
+            background: #1c8c43;
+        }
+
+        .btn-danger {
+            background: var(--discord-red);
+            color: #fff;
+        }
+
+        .btn-danger:hover {
+            background: #b42c31;
+        }
+
+        .btn-secondary {
+            background: #4e5058;
+            color: #fff;
+        }
+
+        .btn-secondary:hover {
+            background: #5d6069;
+        }
+
+        .btn-sm {
+            padding: 6px 10px;
+            font-size: 0.8rem;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* Server List */
+        .server-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .server-item {
+            background: var(--discord-darker);
+            border-radius: 6px;
+            padding: 12px;
+            border: 1px solid #3f4147;
+        }
+
+        .server-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .server-id {
+            font-family: 'Consolas', monospace;
+            font-size: 0.85rem;
+            color: var(--discord-light);
+        }
+
+        .server-toggle {
+            position: relative;
+            width: 40px;
+            height: 22px;
+            background: #4e5058;
+            border-radius: 11px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .server-toggle.active {
+            background: var(--discord-green);
+        }
+
+        .server-toggle::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform 0.2s;
+        }
+
+        .server-toggle.active::after {
+            transform: translateX(18px);
+        }
+
+        .channel-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .channel-tag {
+            background: #5865f233;
+            color: #a6a9b6;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-family: 'Consolas', monospace;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .channel-tag .remove {
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+
+        .channel-tag .remove:hover {
+            opacity: 1;
+        }
+
+        .add-channel-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .add-channel-row input {
+            flex: 1;
+            padding: 8px 10px;
+            font-size: 0.8rem;
+        }
+
+        /* Block Patterns */
+        .pattern-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .pattern-item {
+            background: var(--discord-darker);
+            padding: 8px 12px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: 'Consolas', monospace;
+            font-size: 0.85rem;
+        }
+
+        /* Slider */
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .slider-container input[type="range"] {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 6px;
+            background: #4e5058;
+            border-radius: 3px;
+            border: none;
+            padding: 0;
+        }
+
+        .slider-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--discord-accent);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .slider-value {
+            min-width: 50px;
+            text-align: center;
+            font-weight: 600;
+            color: var(--discord-accent);
+        }
+
+        /* Toggle Switch */
+        .toggle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #3f4147;
+        }
+
+        .toggle-row:last-child {
+            border-bottom: none;
+        }
+
+        .toggle-label {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .toggle-label span {
+            font-size: 0.9rem;
+        }
+
+        .toggle-label small {
+            color: var(--discord-gray);
+            font-size: 0.75rem;
+            margin-top: 2px;
+        }
+
+        /* Dashboard Config Display */
+        .config-display {
+            background: var(--discord-darker);
+            border-radius: 6px;
+            padding: 16px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.8rem;
+            max-height: 300px;
+            overflow: auto;
+            white-space: pre-wrap;
+            color: #9ca0a8;
+            line-height: 1.5;
+        }
+
+        .config-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        /* Status */
+        .status {
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .status.show {
+            display: block;
+        }
+
+        .status.success {
+            background: #23a55a22;
+            border: 1px solid var(--discord-green);
+            color: var(--discord-green);
+        }
+
+        .status.error {
+            background: #da373c22;
+            border: 1px solid var(--discord-red);
+            color: var(--discord-red);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: var(--discord-gray);
+        }
+
+        .empty-state .icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            opacity: 0.5;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--discord-darker);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #4e5058;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #5d6069;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            <span class="icon">⚙️</span>
+            Discord Middleware Admin
+        </h1>
+        <p class="subtitle">Configure server filters, security settings, and middleware behavior</p>
+
+        <div id="status" class="status"></div>
+
+        <div class="grid">
+            <!-- Server/Channel Management -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span class="icon">🏠</span>
+                        Server Management
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Add New Server</label>
+                    <div class="btn-group">
+                        <input type="text" id="newServerId" placeholder="Server ID (e.g., 123456789)">
+                        <button class="btn btn-primary" onclick="addServer()">Add Server</button>
+                    </div>
+                </div>
+
+                <div id="serverList" class="server-list">
+                    <div class="empty-state">
+                        <div class="icon">📭</div>
+                        <div>No servers configured</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security Settings -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span class="icon">🛡️</span>
+                        Security Settings
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Rate Limit (requests per minute)</label>
+                    <div class="slider-container">
+                        <input type="range" id="rateLimit" min="1" max="120" value="30" oninput="updateRateLimitValue()">
+                        <span class="slider-value" id="rateLimitValue">30</span>
+                    </div>
+                </div>
+
+                <div class="toggle-row">
+                    <div class="toggle-label">
+                        <span>Injection Detection</span>
+                        <small>Block malicious payload attempts</small>
+                    </div>
+                    <div class="server-toggle active" id="injectionDetection" onclick="toggleInjection()"></div>
+                </div>
+
+                <div class="form-group" style="margin-top: 16px;">
+                    <label>Block Patterns</label>
+                    <div class="btn-group" style="margin-bottom: 10px;">
+                        <input type="text" id="newPattern" placeholder="Regex pattern (e.g., spam|advertisement)">
+                        <button class="btn btn-primary btn-sm" onclick="addPattern()">Add</button>
+                    </div>
+                    <div id="patternList" class="pattern-list"></div>
+                </div>
+            </div>
+
+            <!-- Dashboard / Config -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span class="icon">📊</span>
+                        Configuration Dashboard
+                    </div>
+                </div>
+
+                <div class="config-display" id="configDisplay">
+                    No configuration loaded
+                </div>
+
+                <div class="config-actions">
+                    <button class="btn btn-success" onclick="saveConfig()">
+                        💾 Save to config.yaml
+                    </button>
+                    <button class="btn btn-secondary" onclick="loadConfig()">
+                        📂 Load from config.yaml
+                    </button>
+                    <button class="btn btn-secondary" onclick="refreshDisplay()">
+                        🔄 Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let config = {
+            servers: [],
+            rateLimit: 30,
+            injectionDetection: true,
+            blockPatterns: []
+        };
+
+        // Status Messages
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status show ${type}`;
+            setTimeout(() => status.classList.remove('show'), 3000);
+        }
+
+        // Server Management
+        function addServer() {
+            const input = document.getElementById('newServerId');
+            const serverId = input.value.trim();
+            
+            if (!serverId) {
+                showStatus('Please enter a server ID', 'error');
+                return;
+            }
+
+            if (config.servers.find(s => s.id === serverId)) {
+                showStatus('Server already exists', 'error');
+                return;
+            }
+
+            config.servers.push({
+                id: serverId,
+                enabled: true,
+                channels: []
+            });
+
+            input.value = '';
+            renderServers();
+            refreshDisplay();
+            showStatus('Server added', 'success');
+        }
+
+        function removeServer(serverId) {
+            config.servers = config.servers.filter(s => s.id !== serverId);
+            renderServers();
+            refreshDisplay();
+            showStatus('Server removed', 'success');
+        }
+
+        function toggleServer(serverId) {
+            const server = config.servers.find(s => s.id === serverId);
+            if (server) {
+                server.enabled = !server.enabled;
+                renderServers();
+                refreshDisplay();
+            }
+        }
+
+        function addChannel(serverId) {
+            const input = document.getElementById(`channelInput-${serverId}`);
+            const channelId = input.value.trim();
+            
+            if (!channelId) return;
+
+            const server = config.servers.find(s => s.id === serverId);
+            if (server && !server.channels.includes(channelId)) {
+                server.channels.push(channelId);
+                renderServers();
+                refreshDisplay();
+            }
+
+            input.value = '';
+        }
+
+        function removeChannel(serverId, channelId) {
+            const server = config.servers.find(s => s.id === serverId);
+            if (server) {
+                server.channels = server.channels.filter(c => c !== channelId);
+                renderServers();
+                refreshDisplay();
+            }
+        }
+
+        function renderServers() {
+            const container = document.getElementById('serverList');
+            
+            if (config.servers.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">📭</div>
+                        <div>No servers configured</div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = config.servers.map(server => `
+                <div class="server-item">
+                    <div class="server-header">
+                        <div>
+                            <div class="server-id">Server: ${server.id}</div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 0.75rem; color: ${server.enabled ? 'var(--discord-green)' : 'var(--discord-gray)'}">
+                                ${server.enabled ? 'Enabled' : 'Disabled'}
+                            </span>
+                            <div class="server-toggle ${server.enabled ? 'active' : ''}" onclick="toggleServer('${server.id}')"></div>
+                            <button class="btn btn-danger btn-sm" onclick="removeServer('${server.id}')">✕</button>
+                        </div>
+                    </div>
+                    <div class="channel-list">
+                        ${server.channels.map(ch => `
+                            <span class="channel-tag">
+                                #${ch}
+                                <span class="remove" onclick="removeChannel('${server.id}', '${ch}')">✕</span>
+                            </span>
+                        `).join('')}
+                    </div>
+                    <div class="add-channel-row">
+                        <input type="text" id="channelInput-${server.id}" placeholder="Channel ID" onkeypress="if(event.key==='Enter')addChannel('${server.id}')">
+                        <button class="btn btn-primary btn-sm" onclick="addChannel('${server.id}')">Add Channel</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Security Settings
+        function updateRateLimitValue() {
+            const value = document.getElementById('rateLimit').value;
+            document.getElementById('rateLimitValue').textContent = value;
+            config.rateLimit = parseInt(value);
+            refreshDisplay();
+        }
+
+        function toggleInjection() {
+            const toggle = document.getElementById('injectionDetection');
+            config.injectionDetection = !config.injectionDetection;
+            toggle.classList.toggle('active', config.injectionDetection);
+            refreshDisplay();
+        }
+
+        function addPattern() {
+            const input = document.getElementById('newPattern');
+            const pattern = input.value.trim();
+            
+            if (!pattern) return;
+            if (config.blockPatterns.includes(pattern)) {
+                showStatus('Pattern already exists', 'error');
+                return;
+            }
+
+            config.blockPatterns.push(pattern);
+            input.value = '';
+            renderPatterns();
+            refreshDisplay();
+            showStatus('Pattern added', 'success');
+        }
+
+        function removePattern(pattern) {
+            config.blockPatterns = config.blockPatterns.filter(p => p !== pattern);
+            renderPatterns();
+            refreshDisplay();
+            showStatus('Pattern removed', 'success');
+        }
+
+        function renderPatterns() {
+            const container = document.getElementById('patternList');
+            
+            if (config.blockPatterns.length === 0) {
+                container.innerHTML = '<div style="color: var(--discord-gray); font-size: 0.8rem;">No patterns blocked</div>';
+                return;
+            }
+
+            container.innerHTML = config.blockPatterns.map(pattern => `
+                <div class="pattern-item">
+                    <span>${pattern}</span>
+                    <span class="remove" onclick="removePattern('${pattern.replace(/'/g, "\\'")}')" style="cursor: pointer;">✕</span>
+                </div>
+            `).join('');
+        }
+
+        // Config Display
+        function refreshDisplay() {
+            const display = document.getElementById('configDisplay');
+            const yaml = generateYAML(config);
+            display.textContent = yaml;
+        }
+
+        function generateYAML(cfg) {
+            let yaml = '# Discord Middleware Configuration\n\n';
+            
+            yaml += '# Servers to apply middleware\n';
+            yaml += 'servers:\n';
+            if (cfg.servers.length === 0) {
+                yaml += '  []\n';
+            } else {
+                cfg.servers.forEach(server => {
+                    yaml += `  - id: "${server.id}"\n`;
+                    yaml += `    enabled: ${server.enabled}\n`;
+                    yaml += `    channels:\n`;
+                    if (server.channels.length === 0) {
+                        yaml += '      []\n';
+                    } else {
+                        server.channels.forEach(ch => {
+                            yaml += `      - "${ch}"\n`;
+                        });
+                    }
+                });
+            }
+            
+            yaml += '\n# Security Settings\n';
+            yaml += `rate_limit: ${cfg.rateLimit}\n`;
+            yaml += `injection_detection: ${cfg.injectionDetection}\n`;
+            yaml += '\n# Blocked Patterns (regex)\n';
+            yaml += 'block_patterns:\n';
+            if (cfg.blockPatterns.length === 0) {
+                yaml += '  []\n';
+            } else {
+                cfg.blockPatterns.forEach(p => {
+                    yaml += `  - "${p}"\n`;
+                });
+            }
+            
+            return yaml;
+        }
+
+        // Load/Save Config via fetch
+        async function saveConfig() {
+            const yaml = generateYAML(config);
+            
+            try {
+                const response = await fetch('/api/config/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ yaml, filename: 'config.yaml' })
+                });
+                
+                if (response.ok) {
+                    showStatus('Configuration saved to config.yaml', 'success');
+                } else {
+                    // Fallback: download as file
+                    downloadFile(yaml, 'config.yaml');
+                    showStatus('Config downloaded (API unavailable)', 'success');
+                }
+            } catch (e) {
+                // Fallback: download as file
+                downloadFile(yaml, 'config.yaml');
+                showStatus('Config downloaded (API unavailable)', 'success');
+            }
+        }
+
+        async function loadConfig() {
+            try {
+                const response = await fetch('/api/config/load');
+                if (response.ok) {
+                    const data = await response.json();
+                    parseYAML(data.yaml || '');
+                    showStatus('Configuration loaded', 'success');
+                } else {
+                    // Try loading from file input
+                    loadConfigFromFile();
+                }
+            } catch (e) {
+                loadConfigFromFile();
+            }
+        }
+
+        function loadConfigFromFile() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.yaml,.yml';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const text = await file.text();
+                    parseYAML(text);
+                    showStatus('Configuration loaded from file', 'success');
+                }
+            };
+            input.click();
+        }
+
+        function parseYAML(yaml) {
+            // Simple YAML parser for our config structure
+            const lines = yaml.split('\n');
+            let currentServer = null;
+            
+            config = {
+                servers: [],
+                rateLimit: 30,
+                injectionDetection: true,
+                blockPatterns: []
+            };
+            
+            let inServers = false;
+            let inChannels = false;
+            
+            for (let line of lines) {
+                const trimmed = line.trim();
+                
+                if (trimmed === 'servers:') {
+                    inServers = true;
+                    continue;
+                }
+                
+                if (trimmed.startsWith('rate_limit:')) {
+                    config.rateLimit = parseInt(trimmed.split(':')[1].trim()) || 30;
+                    continue;
+                }
+                
+                if (trimmed.startsWith('injection_detection:')) {
+                    config.injectionDetection = trimmed.includes('true');
+                    continue;
+                }
+                
+                if (trimmed === 'block_patterns:') {
+                    inServers = false;
+                    continue;
+                }
+                
+                if (inServers && trimmed.startsWith('- id:')) {
+                    currentServer = {
+                        id: trimmed.replace('- id:', '').trim().replace(/"/g, ''),
+                        enabled: true,
+                        channels: []
+                    };
+                    config.servers.push(currentServer);
+                    inChannels = false;
+                    continue;
+                }
+                
+                if (inServers && currentServer && trimmed.startsWith('enabled:')) {
+                    currentServer.enabled = trimmed.includes('true');
+                    continue;
+                }
+                
+                if (inServers && currentServer && trimmed === 'channels:') {
+                    inChannels = true;
+                    continue;
+                }
+                
+                if (inChannels && currentServer && trimmed.startsWith('-')) {
+                    const channel = trimmed.replace('-', '').trim().replace(/"/g, '');
+                    if (channel) currentServer.channels.push(channel);
+                    continue;
+                }
+                
+                if (trimmed.startsWith('- "') || trimmed.startsWith("- '")) {
+                    const pattern = trimmed.replace(/^-\s*["']|["']$/g, '');
+                    if (pattern && !inServers) config.blockPatterns.push(pattern);
+                    continue;
+                }
+                
+                if (!trimmed || (!inServers && !inChannels && trimmed.startsWith('-'))) {
+                    inChannels = false;
+                }
+            }
+            
+            // Update UI
+            document.getElementById('rateLimit').value = config.rateLimit;
+            document.getElementById('rateLimitValue').textContent = config.rateLimit;
+            
+            const injectionToggle = document.getElementById('injectionDetection');
+            injectionToggle.classList.toggle('active', config.injectionDetection);
+            
+            renderServers();
+            renderPatterns();
+            refreshDisplay();
+        }
+
+        function downloadFile(content, filename) {
+            const blob = new Blob([content], { type: 'text/yaml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Initialize
+        renderServers();
+        renderPatterns();
+        refreshDisplay();
+    </script>
+</body>
+</html>
