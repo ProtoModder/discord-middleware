@@ -67,6 +67,41 @@ To get server/channel IDs:
 1. Enable Developer Mode in Discord (Settings > Advanced > Developer Mode)
 2. Right-click on a server/channel and select "Copy ID"
 
+## How to Connect
+
+### Option 1: Standalone Bot (recommended)
+
+1. Create a Discord bot at https://discord.com/developers
+2. Get your bot token
+3. Add the token to `config.yaml`
+4. Run the middleware
+5. Use the OAuth2 URL or invite link to add the bot to your server
+
+### Option 2: Proxy (for existing OpenClaw)
+
+1. Configure OpenClaw to use the middleware endpoint
+2. Messages route through middleware first
+3. Filtered then back to OpenClaw
+
+### Example Config
+
+```yaml
+servers:
+  - id: "1477370800972501126"
+    enabled: true
+    channels:
+      - "1478239758064029787"
+```
+
+### Running
+
+```bash
+pip install -r requirements.txt
+cp config.yaml.example config.yaml
+# Edit config.yaml with your settings
+python middleware.py
+```
+
 ## Running the Bot
 
 ```bash
