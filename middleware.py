@@ -685,7 +685,7 @@ async def run_bot_example(config_path: str = "config.yaml"):
 
     # Set up LLM callback
     async def llm_callback(prompt: str, message: dict) -> dict:
-        """Sentinel - connects to Nyx Brain API"""
+        """Sentinel - connects to OpenClaw Bridge"""
         import aiohttp
         
         try:
