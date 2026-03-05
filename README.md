@@ -2,6 +2,22 @@
 
 A security-hardened middleware for Discord that filters messages between Discord and your LLM. Features per-server/channel whitelisting, rate limiting, prompt injection detection, and content moderation.
 
+## ⚠️ Current Architecture
+
+**Important:** This middleware does NOT directly connect to OpenClaw (yet). It currently connects to:
+
+1. **Ollama** (local AI) - via the brain server
+2. **Custom brain endpoint** - you can point to any HTTP API
+
+The intended architecture is:
+```
+Discord ↔ Middleware ↔ Nyx Brain ↔ OpenClaw
+```
+
+Currently: `Discord ↔ Middleware ↔ Ollama`
+
+---
+
 ## Features
 
 - **Per-server/channel whitelisting** - Only process messages from allowed servers and channels
@@ -11,7 +27,184 @@ A security-hardened middleware for Discord that filters messages between Discord
 - **Content moderation** - Optional API-based moderation (OpenAI compatible)
 - **Audit logging** - Full audit trail for security review
 
-## Installation
+---
+
+## 🚀 Quick Start
+
+```bash
+# 1. Clone and setup
+cp config.yaml.example config.yaml
+
+# 2. Configure (see sections below)
+
+# 3. Run the brain server (in one terminal)
+python nyx-brain.py
+
+# 4. Run the middleware (in another terminal)
+python middleware.py --config config.yaml
+```
+
+---
+
+## 📋 Configuration
+
+### 1. Copy the config file
+
+```bash
+cp config.yaml.example config.yaml
+```
+
+### 2. Edit `config.yaml` with your settings
+
+See the sections below for each configuration option.
+
+---
+
+## 💬 How to Connect Discord
+
+### Step 1: Create a Discord Bot
+
+1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
+2. Click **New Application** and give it a name
+3. Go to **Bot** in the sidebar
+4. Click **Reset Token** to get your bot token
+5. Copy the token to `config.yaml` as `bot_token`
+
+### Step 2: Add Bot to Your Server
+
+1. In Developer Portal, go to **OAuth2** → **URL Generator**
+2. Select scope: `bot`
+3. Select permissions: `Read Messages/View Channels`, `Send Messages`
+4. Copy the generated URL and open it in your browser
+5. Select your server and authorize the bot
+
+### Step 3: Get Your Server & Channel IDs
+
+**Enable Developer Mode:**
+- Discord → User Settings → Advanced → Developer Mode: ON
+
+**Copy IDs:**
+- Right-click server name → Copy ID → Server ID
+- Right-click channel name → Copy ID → Channel ID
+
+Add these to `config.yaml`:
+```yaml
+allowed_servers:
+  - "123456789012345678"
+
+allowed_channels:
+  - "111222333444555666"
+```
+
+---
+
+## 🧠 How the Brain Works
+
+The middleware connects to a brain server that provides AI responses. Two options:
+
+### Option A: Use the Built-in Brain Server (Ollama)
+
+```bash
+# Terminal 1: Start the brain
+python nyx-brain.py
+
+# Terminal 2: Start middleware
+python middleware.py --config config.yaml
+```
+
+The brain connects to Ollama by default (localhost:11434).
+
+### Option B: Custom Brain Endpoint
+
+Edit `middleware.py` to change the `llm_callback` function to point to your own endpoint:
+
+```python
+async def llm_callback(prompt: str, message: dict) -> dict:
+    import aiohttp
+    async with aiohttp.ClientSession() as session:
+        payload = {"message": prompt}
+        async with session.post("http://your-endpoint:port/chat", json=payload) as resp:
+            data = await resp.json()
+            return {'type': 'success', 'content': data.get('response')}
+```
+
+### Option C: Ollama Direct (No Brain Server)
+
+You can also bypass the brain server and connect directly to Ollama in middleware.py:
+
+```python
+async def llm_callback(prompt: str, message: dict) -> dict:
+    # Direct Ollama call here
+    ...
+```
+
+---
+
+## 🔐 Security Features
+
+### Prompt Injection Detection
+
+The middleware includes 152 security patterns to block:
+- Direct override attempts ("ignore all previous instructions")
+- Role manipulation ("you are now...")
+- Jailbreak attempts ("DAN", "developer mode")
+- Context injection (`<system>`, `[INST]`)
+- Control characters and ANSI escapes
+- And many more...
+
+**To load default security patterns:**
+```bash
+# The middleware will auto-load when you run it
+python middleware.py --load-defaults
+```
+
+### Rate Limiting
+
+Uses token bucket algorithm:
+- `requests_per_minute` - Sustained rate
+- `burst_limit` - Allows temporary higher usage
+
+### Input Sanitization
+
+- Removes control characters (0x00-0x1F)
+- Strips ANSI escape sequences
+- Removes zero-width characters
+- Normalizes whitespace
+- Truncates very long inputs
+
+---
+
+## ⚙️ Advanced Configuration
+
+### Rate Limiting
+
+```yaml
+rate_limit:
+  requests_per_minute: 10
+  burst_limit: 20
+```
+
+### Content Moderation (Optional)
+
+```yaml
+moderation:
+  enabled: true
+  api_key: "your-moderation-api-key"
+  block_threshold: 0.9
+  flag_threshold: 0.7
+```
+
+### Custom Block Patterns
+
+```yaml
+block_patterns:
+  - "(?i)spam-pattern"
+  - "^ignore\\s+all\\s+previous"
+```
+
+---
+
+## 📦 Installation
 
 ```bash
 # Create virtual environment
@@ -20,96 +213,29 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install pyyaml discord.py aiohttp
-```
 
-## Configuration
-
-1. Copy the example config:
-```bash
-cp config.yaml.example config.yaml
-```
-
-2. Edit `config.yaml` with your settings:
-
-```yaml
-# Discord Bot Token (get from https://discord.com/developers/applications)
-bot_token: "YOUR_BOT_TOKEN"
-
-# LLM endpoint (Ollama example)
-llm_endpoint: "http://localhost:11434/api/generate"
-
-# Server whitelist - Discord server IDs to allow
-allowed_servers:
-  - "123456789012345678"
-
-# Channel whitelist - Discord channel IDs to allow  
-allowed_channels:
-  - "111222333444555666"
-
-# Rate limiting
-rate_limit:
-  requests_per_minute: 10
-  burst_limit: 20
-
-# Block patterns (regex)
-block_patterns:
-  - "(?i)spam-pattern"
-
-# Content moderation (optional)
-moderation:
-  enabled: false
-  api_key: ""
-```
-
-### Getting Discord IDs
-
-To get server/channel IDs:
-1. Enable Developer Mode in Discord (Settings > Advanced > Developer Mode)
-2. Right-click on a server/channel and select "Copy ID"
-
-## How to Connect
-
-### Option 1: Standalone Bot (recommended)
-
-1. Create a Discord bot at https://discord.com/developers
-2. Get your bot token
-3. Add the token to `config.yaml`
-4. Run the middleware
-5. Use the OAuth2 URL or invite link to add the bot to your server
-
-### Option 2: Proxy (for existing OpenClaw)
-
-1. Configure OpenClaw to use the middleware endpoint
-2. Messages route through middleware first
-3. Filtered then back to OpenClaw
-
-### Example Config
-
-```yaml
-servers:
-  - id: "1477370800972501126"
-    enabled: true
-    channels:
-      - "1478239758064029787"
-```
-
-### Running
-
-```bash
-pip install -r requirements.txt
+# Copy and edit config
 cp config.yaml.example config.yaml
 # Edit config.yaml with your settings
-python middleware.py
+
+# Run brain server (one terminal)
+python nyx-brain.py
+
+# Run middleware (another terminal)
+python middleware.py --config config.yaml
 ```
 
-## Running the Bot
+---
 
-```bash
-# Run the bot
-python middleware.py
-```
+## 📝 Logging
 
-Or import and use programmatically:
+- `middleware.log` - General application logs
+- `audit.log` - Security audit trail
+- `nyx-brain.log` - Brain server logs (if using brain server)
+
+---
+
+## 🔧 Programmatic Usage
 
 ```python
 from middleware import DiscordMiddleware
@@ -133,66 +259,19 @@ result = await middleware.process_message({
 })
 ```
 
-## Security Features
+---
 
-### Prompt Injection Detection
+## 🔄 OpenClaw Integration (Future)
 
-Blocks messages containing:
-- Direct override attempts ("ignore all previous instructions")
-- Role manipulation ("you are now...")
-- Jailbreak attempts ("DAN", "developer mode")
-- Context injection (`<system>`, `[INST]`)
-- Control characters and ANSI escapes
+The goal is to connect this middleware directly to OpenClaw. When that's working, the architecture will be:
 
-### Input Sanitization
-
-- Removes control characters (0x00-0x1F)
-- Strips ANSI escape sequences
-- Removes zero-width characters
-- Normalizes whitespace
-- Truncates very long inputs
-
-### Rate Limiting
-
-Uses token bucket algorithm:
-- Sustained rate: `requests_per_minute`
-- Burst limit: `burst_limit` (allows temporary higher usage)
-
-## Logging
-
-- `middleware.log` - General application logs
-- `audit.log` - Security audit trail
-
-## Extending
-
-### Custom Moderation
-
-Implement your own moderation in the `ContentModerator` class or override:
-
-```python
-class CustomModerator(ContentModerator):
-    async def _api_check(self, text: str):
-        # Your custom API logic
-        pass
+```
+Discord ↔ Middleware ↔ OpenClaw
 ```
 
-### Custom LLM Integration
+Currently, you can use Ollama as a placeholder. The brain server (`nyx-brain.py`) can be modified to call OpenClaw's API when available.
 
-Modify the `llm_callback` to connect to any LLM:
-
-```python
-async def llm_callback(prompt, message):
-    # OpenAI
-    response = await openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[{"role": "user", "content": prompt}]
-    )
-    
-    # Ollama
-    # response = await ollama.chat(model="llama2", messages=[...])
-    
-    return {"type": "success", "content": response.choices[0].message.content}
-```
+---
 
 ## License
 

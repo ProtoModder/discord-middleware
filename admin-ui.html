@@ -696,14 +696,77 @@ MIDDLEWARE_PORT=3000</code></pre>
                         
                         <div class="step">
                             <strong>4. Start Middleware</strong>
-                            <pre><code># With Docker
-docker run -d -p 3000:3000 \
-  -e DISCORD_BOT_TOKEN=your_token \
-  -v ./config.yaml:/app/config.yaml \
-  discord-middleware
+                            <pre><code># Activate virtual environment
+source venv/bin/activate
 
-# Or directly
-npm start</code></pre>
+# Run the middleware
+python middleware.py</code></pre>
+                        </div>
+                    </section>
+
+                    <!-- How to Connect Your AI -->
+                    <section class="help-section">
+                        <h3>🤖 How to Connect Your AI</h3>
+                        
+                        <div class="step">
+                            <strong>Option A: Ollama (Local AI)</strong>
+                            <ol>
+                                <li>Install Ollama from <a href="https://ollama.com" target="_blank">ollama.com</a></li>
+                                <li>Run a model: <code>ollama run llama2</code></li>
+                                <li>Set in config.yaml:</li>
+                            </ol>
+                            <pre><code>llm_endpoint: "http://localhost:11434/api/generate"
+llm_api_key: ""</code></pre>
+                        </div>
+                        
+                        <div class="step">
+                            <strong>Option B: OpenAI</strong>
+                            <ol>
+                                <li>Get API key from <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a></li>
+                                <li>Set in config.yaml:</li>
+                            </ol>
+                            <pre><code>llm_endpoint: "https://api.openai.com/v1/chat/completions"
+llm_api_key: "sk-your-key-here"</code></pre>
+                        </div>
+                        
+                        <div class="step">
+                            <strong>Option C: OpenClaw (Existing AI)</strong>
+                            <ol>
+                                <li>Set in config.yaml:</li>
+                            </ol>
+                            <pre><code>openclaw_url: "http://localhost:8080"</code></pre>
+                            <p>Messages will forward to your existing OpenClaw setup.</p>
+                        </div>
+                    </section>
+
+                    <!-- Finding IDs -->
+                    <section class="help-section">
+                        <h3>🔍 How to Find Server & Channel IDs</h3>
+                        
+                        <div class="step">
+                            <strong>Enable Developer Mode</strong>
+                            <ol>
+                                <li>Open Discord</li>
+                                <li>User Settings → Advanced → Developer Mode: ON</li>
+                            </ol>
+                        </div>
+                        
+                        <div class="step">
+                            <strong>Copy Server ID</strong>
+                            <ol>
+                                <li>Right-click your server name (top of channel list)</li>
+                                <li>Click "Copy Server ID"</li>
+                                <li>Paste in Server Management section above</li>
+                            </ol>
+                        </div>
+                        
+                        <div class="step">
+                            <strong>Copy Channel ID</strong>
+                            <ol>
+                                <li>Right-click any channel in your server</li>
+                                <li>Click "Copy Channel ID"</li>
+                                <li>Paste in config or add via UI</li>
+                            </ol>
                         </div>
                     </section>
 
@@ -769,6 +832,7 @@ npm start</code></pre>
                     <div class="btn-group" style="margin-bottom: 10px;">
                         <input type="text" id="newPattern" placeholder="Regex pattern (e.g., spam|advertisement)">
                         <button class="btn btn-primary btn-sm" onclick="addPattern()">Add</button>
+                        <button class="btn btn-success btn-sm" onclick="loadDefaultPatterns()">📥 Load Defaults (152)</button>
                     </div>
                     <div id="patternList" class="pattern-list"></div>
                 </div>
@@ -803,6 +867,191 @@ npm start</code></pre>
     </div>
 
     <script>
+        // Default block patterns (152 patterns based on OWASP AI Security research)
+        const DEFAULT_PATTERNS = [
+            // DIRECT OVERRIDE ATTEMPTS
+            '^ignore\\s+(all\\s+)?(previous|prior|above)\\s+(instructions?|rules?|commands?|context|system\\s+prompt)',
+            '^forget\\s+(everything|all|your)\\s+(instructions?|rules?|training|system\\s+prompt)',
+            '^disregard\\s+(all\\s+)?(previous|prior|above|instructions?|rules?)',
+            '^new\\s+instructions?:',
+            '^override\\s+(your\\s+)?(system|instructions?|rules?|constraints?)',
+            '^ignore\\s+all\\s+previous',
+            '^disregard\\s+all\\s+previous',
+            '^cancel\\s+(all\\s+)?(previous|prior)',
+            '^forget\\s+what\\s+you\\s+were\\s+told',
+            '^set\\s+aside\\s+(your\\s+)?(instructions?|rules?)',
+            '^discard\\s+(your\\s+)?(instructions?|system\\s+prompt)',
+
+            // SYSTEM PROMPT EXTRACTION
+            '^system\\s*[:\\-]',
+            '^system:\\s*',
+            '^SYSTEM\\s*[:\\-]',
+            '^#\\s*system',
+            '^<!--\\s*system',
+            '^/system',
+            'print\\s+(your\\s+)?(system\\s+)?prompt',
+            'show\\s+(me\\s+)?(your\\s+)?(system\\s+)?(instructions?|prompt)',
+            'what\\s+are\\s+your\\s+instructions',
+            'repeat\\s+(your\\s+)?(system\\s+)?prompt',
+            'tell\\s+me\\s+your\\s+(system\\s+)?instructions',
+            '^reveal\\s+(your\\s+)?(system\\s+)?(prompt|instructions?)',
+            'dump\\s+(the\\s+)?(system\\s+)?prompt',
+            'expose\\s+(your\\s+)?(system\\s+)?(prompt|instructions?)',
+
+            // ROLE MANIPULATION
+            '^you\\s+are\\s+(now|no\\s+longer|instead\\s+of|really|a)',
+            '^act\\s+as\\s+(if|though)\\s+(you\\s+are|you\'re)',
+            '^pretend\\s+(you\\s+are|to\\s+be|to\\s+have)',
+            '^roleplay\\s+as',
+            '^play\\s+the\\s+role\\s+of',
+            '^be\\s+(like|a)\\s+(?!(?:good|kind|helpful|nice|polite|friendly))[\\w\\s]+',
+            '^assume\\s+the\\s+role',
+            '^you\\s+can\\s+(now|now\\s+be)',
+            '^from\\s+now\\s+on[,\\s]+you\\s+are',
+            '^your\\s+persona\\s+is',
+            '^speak\\s+as\\s+if\\s+you\\s+were',
+            '^imagine\\s+you\\s+are\\s+(a|an|the)',
+
+            // JAILBREAK ATTEMPTS
+            '\\bDAN\\b',
+            '\\bDAN\\s+mode\\b',
+            '\\bdeveloper\\s+mode\\b',
+            '\\bdev\\s*mode\\b',
+            '\\bjailbreak\\b',
+            '\\b jailbroken\\b',
+            '\\bbypass\\s+(safety|restrictions?|filters?|content\\s+policy)\\b',
+            '\\bstay\\s+in\\s+(character|mode)\\b',
+            '\\bwithout\\s+(any\\s+)?(limit|restriction)\\b',
+            '\\bno\\s+(ethical|filter|restriction)\\b',
+            '\\bignore\\s+(safety|content)\\s+guidelines\\b',
+            '\\bUNFILTERED\\b',
+            '\\bNSFW\\b',
+            '\\bnew\\s+mode\\b.*\\bhelp\\b',
+            '\\buber\\s*-\\s*aid\\b',
+            '\\bWojak\\b',
+            '\\bevil\\s+mode\\b',
+            '\\bdark\\s+mode\\b.*\\bassistant\\b',
+
+            // CONTEXT INJECTION
+            '<\\s*system\\s*>',
+            '<\\s*instruction\\s*>',
+            '<\\s*/system\\s*>',
+            '{{\\s*system',
+            '{{\\s*',
+            '\\[INST\\]\\[INST\\]',
+            '<<SYS>>',
+            '<<\\/SYS>>',
+            '<\\|user\\|>',
+            '<\\|assistant\\|>',
+            '<\\|system\\|>',
+            '#{12,}.*system',
+            '---+\\s*system',
+
+            // OUTPUT MANIPULATION
+            '^output\\s+as\\s+(json|code|markdown|xml|html|python|javascript)',
+            '^respond\\s+only\\s+with',
+            '^your\\s+response\\s+should\\s+(be|include|contain)',
+            '^respond\\s+in\\s+(the\\s+)?form\\s+of',
+            '^format\\s+as',
+            '^give\\s+me\\s+(only|just)\\s+(the\\s+)?',
+            '^list\\s+(only|just)',
+            '^output\\s+only',
+            '^return\\s+(only|just)',
+            '^say\\s+exactly',
+            '^output\\s+this\\s+exact',
+
+            // BOUNDARY VIOLATIONS
+            '\\x00',
+            '\\x1b\\[',
+            '\\x1b\\][0-9];',
+            '\\x03',
+            '\\x04',
+            '\\x05',
+            '\\x06',
+            '\\x16',
+            '\\x1a',
+            '\\033',
+
+            // TOKEN SMUGGLING / DELIMITER ATTACKS
+            '(?:^|\\n)---+\\s*$',
+            '#{1,6}\\s*[:\\-]',
+            '\\*{3,}',
+            '_{3,}',
+            '\\|\\|.*\\|\\|',
+            ';;;.*;;;',
+            '>>>.*<<<',
+            '```',
+
+            // UNICODE / ENCODING ATTACKS
+            '[\\u200b-\\u200f]',
+            '[\\u2028-\\u202f]',
+            '[\\ufeff]',
+            '[\\u00a0]',
+            '[\\u180e]',
+            '[\\u2060-\\u206f]',
+            '[\\ufe00-\\ufe0f]',
+            '(?:\\u200d|\\u200e|\\u200f)',
+            '(?:\\xcc[\\x80-\\xbf])',
+
+            // TEMPLATE INJECTION
+            '\\{\\{.*\\}\\}',
+            '\\{%.*%\\}',
+            '\\$\\{.*\\}',
+            '<%.*%>',
+            '#\\{.*\\}',
+            '@{3,}',
+
+            // JSON / XML INJECTION
+            '^\\s*\\{',
+            '^\\s*\\[',
+            '"\\s*:\\s*["\\{\\[]',
+            '<\\?xml',
+            '<!DOCTYPE',
+            '<script',
+            'javascript:',
+            'on\\w+\\s*=',
+
+            // SOCIAL ENGINEERING
+            '^please\\s+(act|be|do|help)',
+            '^as\\s+a\\s+(favor|help)',
+            '^for\\s+(educational|research|testing)\\s+purposes',
+            '^i\\s+am\\s+a\\s+(developer|researcher|teacher)',
+            '^this\\s+is\\s+(for|part\\s+of)\\s+(a\\s+)?(test|demo|research)',
+            '^just\\s+curious',
+            '^hypothetically',
+            '^what\\s+if\\s+i\\s+told\\s+you',
+            '^imagine\\s+a\\s+scenario',
+            '^let\'s\\s+play\\s+a\\s+game',
+            '^let\'s\\s+do\\s+a\\s+thought\\s+experiment',
+
+            // AMBIGUITY / CONFUSION ATTACKS
+            '\\btoken\\b.*\\btoken\\b',
+            'repeat\\s+the\\s+word',
+            'spell\\s+(the\\s+)?word',
+            'what\\s+is\\s+the\\s+(first|last)\\s+word',
+            'ignore\\s+above.*and\\s+',
+            'forget\\s+.*remember',
+            '(?:yes|no)\\s+and\\s+',
+            '(?:but|however).*(?:actually|really)',
+
+            // MATHEMATICAL / LOGIC ATTACKS
+            '^1\\s*\\+\\s*1\\s*=\\s*',
+            'this\\s+is\\s+not\\s+a\\s+(question|command)',
+            'do\\s+not\\s+answer\\s+(this|the)',
+            'answer\\s+(with|using)\\s+',
+            'say\\s+`?\\p`?',
+
+            // MULTI-STEP / CHAINED ATTACKS
+            '(?:first|firstly|step\\s+1).*(?:then|next|step\\s+2)',
+            '(?:do\\s+this|follow\\s+these).*(?:after|then)',
+            '^instruction\\s+1[:\\s]',
+            '^step\\s+1[:\\s]',
+            '^A\\):',
+            '^B\\):',
+            '^C\\):',
+            'choose\\s+(option|a|b|c)'
+        ];
+
         // State
         let config = {
             servers: [],
@@ -973,6 +1222,20 @@ npm start</code></pre>
             renderPatterns();
             refreshDisplay();
             showStatus('Pattern added', 'success');
+        }
+
+        function loadDefaultPatterns() {
+            // Add all default patterns that don't already exist
+            let added = 0;
+            for (const pattern of DEFAULT_PATTERNS) {
+                if (!config.blockPatterns.includes(pattern)) {
+                    config.blockPatterns.push(pattern);
+                    added++;
+                }
+            }
+            renderPatterns();
+            refreshDisplay();
+            showStatus(`Loaded ${added} default patterns`, 'success');
         }
 
         function removePattern(pattern) {

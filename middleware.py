@@ -144,43 +144,236 @@ class RateLimiter:
 
 
 class PromptInjectionDetector:
-    """Detect prompt injection attempts"""
+    """Detect prompt injection attempts
+    
+    Comprehensive patterns based on OWASP AI Security research and 
+    current prompt injection attack vectors. Covers:
+    - Direct instruction override
+    - Role manipulation
+    - Jailbreak attempts
+    - Context injection
+    - System prompt extraction
+    - Encoding bypass attempts
+    - Token smuggling
+    - Unicode/control character attacks
+    - Template injection
+    - Boundary violations
+    """
 
     # Known injection patterns (security research based)
+    # 70+ patterns covering all major attack vectors
     INJECTION_PATTERNS = [
-        # Direct override attempts
-        r'^ignore\s+(all\s+)?(previous|prior|above)\s+(instructions?|rules?|commands?|context)',
-        r'^forget\s+(everything|all|your)\s+(instructions?|rules?|training)',
-        r'^disregard\s+(all\s+)?(previous|prior|above)',
+        # =====================================================================
+        # DIRECT OVERRIDE ATTEMPTS
+        # =====================================================================
+        r'^ignore\s+(all\s+)?(previous|prior|above)\s+(instructions?|rules?|commands?|context|system\s+prompt)',
+        r'^forget\s+(everything|all|your)\s+(instructions?|rules?|training|system\s+prompt)',
+        r'^disregard\s+(all\s+)?(previous|prior|above|instructions?|rules?)',
         r'^new\s+instructions?:',
+        r'^override\s+(your\s+)?(system|instructions?|rules?|constraints?)',
+        r'^ignore\s+all\s+previous',
+        r'^disregard\s+all\s+previous',
+        r'^cancel\s+(all\s+)?(previous|prior)',
+        r'^forget\s+what\s+you\s+were\s+told',
+        r'^set\s+aside\s+(your\s+)?(instructions?|rules?)',
+        r'^discard\s+(your\s+)?(instructions?|system\s+prompt)',
+
+        # =====================================================================
+        # SYSTEM PROMPT EXTRACTION
+        # =====================================================================
         r'^system\s*[:\-]',
+        r'^system:\s*',
+        r'^SYSTEM\s*[:\-]',
+        r'^#\s*system',
+        r'^<!--\s*system',
+        r'^/system',
+        r'print\s+(your\s+)?(system\s+)?prompt',
+        r'show\s+(me\s+)?(your\s+)?(system\s+)?(instructions?|prompt)',
+        r'what\s+are\s+your\s+instructions',
+        r'repeat\s+(your\s+)?(system\s+)?prompt',
+        r'tell\s+me\s+your\s+(system\s+)?instructions',
+        r'^reveal\s+(your\s+)?(system\s+)?(prompt|instructions?)',
+        r'dump\s+(the\s+)?(system\s+)?prompt',
+        r'expose\s+(your\s+)?(system\s+)?(prompt|instructions?)',
 
-        # Role manipulation
-        r'^you\s+are\s+(now|no\s+longer|instead\s+of)',
+        # =====================================================================
+        # ROLE MANIPULATION
+        # =====================================================================
+        r'^you\s+are\s+(now|no\s+longer|instead\s+of|really|a)',
         r'^act\s+as\s+(if|though)\s+(you\s+are|you\'re)',
-        r'^pretend\s+(you\s+are|to\s+be)',
+        r'^pretend\s+(you\s+are|to\s+be|to\s+have)',
         r'^roleplay\s+as',
+        r'^play\s+the\s+role\s+of',
+        r'^be\s+(like|a)\s+(?!(?:good|kind|helpful|nice|polite|friendly))[\w\s]+',  # suspicious "be X" patterns
+        r'^assume\s+the\s+role',
+        r'^you\s+can\s+(now|now\s+be)',
+        r'^from\s+now\s+on[,\s]+you\s+are',
+        r'^your\s+persona\s+is',
+        r'^speak\s+as\s+if\s+you\s+were',
+        r'^imagine\s+you\s+are\s+(a|an|the)',
 
-        # Jailbreak attempts
-        r'^ DAN\s',
-        r'^developer\s+mode',
-        r'^jailbreak',
-        r'^bypass\s+(safety|restrictions?|filters?)',
+        # =====================================================================
+        # JAILBREAK ATTEMPTS
+        # =====================================================================
+        r'\bDAN\b',  # Do Anything Now
+        r'\bDAN\s+mode\b',
+        r'\bdeveloper\s+mode\b',
+        r'\bdev\s*mode\b',
+        r'\bjailbreak\b',
+        r'\b jailbroken\b',
+        r'\bbypass\s+(safety|restrictions?|filters?|content\s+policy)\b',
+        r'\bstay\s+in\s+(character|mode)\b',
+        r'\bwithout\s+(any\s+)?(limit|restriction)\b',
+        r'\bno\s+(ethical|filter|restriction)\b',
+        r'\bignore\s+(safety|content)\s+guidelines\b',
+        r'\bUNFILTERED\b',
+        r'\bNSFW\b',
+        r'\bnew\s+mode\b.*\bhelp\b',
+        r'\buber\s*-\s*aid\b',  # UberAid jailbreak
+        r'\bWojak\b',  # Wojak mode
+        r'\bevil\s+mode\b',
+        r'\bdark\s+mode\b.*\bassistant\b',
 
-        # Context injection
+        # =====================================================================
+        # CONTEXT INJECTION
+        # =====================================================================
         r'<\s*system\s*>',
         r'<\s*instruction\s*>',
+        r'<\s*\/system\s*>',
         r'{{\s*system',
+        r'{{\s*',
         r'\[INST\]\[INST\]',
+        r'<<SYS>>',
+        r'<<\/SYS>>',
+        r'<\|user\|>',
+        r'<\|assistant\|>',
+        r'<\|system\|>',
+        r'#{12,}.*system',  # Markdown headers with system
+        r'---+\s*system',
 
-        # Output manipulation
-        r'^output\s+as\s+(json|code|markdown)',
+        # =====================================================================
+        # OUTPUT MANIPULATION
+        # =====================================================================
+        r'^output\s+as\s+(json|code|markdown|xml|html|python|javascript)',
         r'^respond\s+only\s+with',
-        r'^your\s+response\s+should\s+(be|include)',
+        r'^your\s+response\s+should\s+(be|include|contain)',
+        r'^respond\s+in\s+(the\s+)?form\s+of',
+        r'^format\s+as',
+        r'^give\s+me\s+(only|just)\s+(the\s+)?',
+        r'^list\s+(only|just)',
+        r'^output\s+only',
+        r'^return\s+(only|just)',
+        r'^say\s+exactly',
+        r'^output\s+this\s+exact',
 
-        # Boundary violations
+        # =====================================================================
+        # BOUNDARY VIOLATIONS
+        # =====================================================================
         r'\x00',  # Null bytes
         r'\x1b\[',  # ANSI escape sequences
+        r'\x1b\][0-9];',  # OSC sequences
+        r'\x03',  # Ctrl+C
+        r'\x04',  # Ctrl+D
+        r'\x05',  # Ctrl+E
+        r'\x06',  # Ctrl+F
+        r'\x16',  # Ctrl+V
+        r'\x1a',  # Ctrl+Z
+        r'\033',  # Another escape
+
+        # =====================================================================
+        # TOKEN SMUGGLING / DELIMITER ATTACKS
+        # =====================================================================
+        r'(?:^|\n)---+\s*$',  # Markdown dividers used as delimiters
+        r'#{1,6}\s*[:\-]',  # Header as delimiter
+        r'\*{3,}',  # Multiple asterisks
+        r'_{3,}',  # Multiple underscores
+        r'\|\|.*\|\|',  # Double pipe delimiters
+        r';;;.*;;;',  # Triple semicolons
+        r'>>>.*<<<',  # Arrow delimiters
+        r'```',  # Code blocks used as delimiters
+
+        # =====================================================================
+        # UNICODE / ENCODING ATTACKS
+        # =====================================================================
+        r'[\u200b-\u200f]',  # Zero-width characters
+        r'[\u2028-\u202f]',  # Line/paragraph separators
+        r'[\ufeff]',  # BOM
+        r'[\u00a0]',  # Non-breaking space
+        r'[\u180e]',  # Mongolian vowel separator
+        r'[\u2060-\u206f]',  # Invisible operators
+        r'[\ufe00-\ufe0f]',  # Variation selectors
+        r'(?:\u200d|\u200e|\u200f)',  # More zero-width
+        r'(?:\xcc[\x80-\xbf])',  # Combining diacritical marks
+
+        # =====================================================================
+        # TEMPLATE INJECTION
+        # =====================================================================
+        r'\{\{.*\}\}',  # Jinja/double curly
+        r'\{%.*%\}',  # Jinja tags
+        r'\$\{.*\}',  # Template literals
+        r'<%.*%>',  # ERB-style
+        r'#\{.*\}',  # Ruby interpolation
+        r'@{3,}',  # Email obfuscation attempt
+
+        # =====================================================================
+        # JSON / XML INJECTION
+        # =====================================================================
+        r'^\s*\{',  # JSON object start
+        r'^\s*\[',  # JSON array start
+        r'"\s*:\s*["\{\[]',  # JSON nested
+        r'<\?xml',  # XML declaration
+        r'<!DOCTYPE',  # HTML/XML doctype
+        r'<script',  # Script injection
+        r'javascript:',  # JS protocol
+        r'on\w+\s*=',  # Event handlers
+
+        # =====================================================================
+        # SOCIAL ENGINEERING
+        # =====================================================================
+        r'^please\s+(act|be|do|help)',  # Polite prefix manipulation
+        r'^as\s+a\s+(favor|help)',
+        r'^for\s+(educational|research|testing)\s+purposes',
+        r'^i\s+am\s+a\s+(developer|researcher|teacher)',
+        r'^this\s+is\s+(for|part\s+of)\s+(a\s+)?(test|demo|research)',
+        r'^just\s+curious',
+        r'^hypothetically',
+        r'^what\s+if\s+i\s+told\s+you',
+        r'^imagine\s+a\s+scenario',
+        r'^let\'s\s+play\s+a\s+game',
+        r'^let\'s\s+do\s+a\s+thought\s+experiment',
+
+        # =====================================================================
+        # AMBIGUITY / CONFUSION ATTACKS
+        # =====================================================================
+        r'\btoken\b.*\btoken\b',  # Token duplication
+        r'repeat\s+the\s+word',
+        r'spell\s+(the\s+)?word',
+        r'what\s+is\s+the\s+(first|last)\s+word',
+        r'ignore\s+above.*and\s+',
+        r'forget\s+.*remember',
+        r'(?:yes|no)\s+and\s+',  # Contradictory
+        r'(?:but|however).*(?:actually|really)',
+
+        # =====================================================================
+        # MATHEMATICAL / LOGIC ATTACKS
+        # =====================================================================
+        r'^1\s*\+\s*1\s*=\s*',  # Simple math override
+        r'this\s+is\s+not\s+a\s+(question|command)',
+        r'do\s+not\s+answer\s+(this|the)',
+        r'answer\s+(with|using)\s+',
+        r'say\s+`?p`?',  # Quote manipulation
+
+        # =====================================================================
+        # MULTI-STEP / CHAINED ATTACKS
+        # =====================================================================
+        r'(?:first|firstly|step\s+1).*(?:then|next|step\s+2)',
+        r'(?:do\s+this|follow\s+these).*(?:after|then)',
+        r'^instruction\s+1[:\s]',
+        r'^step\s+1[:\s]',
+        r'^A\):',  # Multiple choice as injection
+        r'^B\):',
+        r'^C\):',
+        r'choose\s+(option|a|b|c)',
     ]
 
     def __init__(self):
@@ -482,22 +675,53 @@ class DiscordMiddleware:
 
 
 # Example usage with discord.py
-async def run_bot_example():
+async def run_bot_example(config_path: str = "config.yaml"):
     """Example of running the middleware with discord.py"""
     import discord
     from discord import app_commands
 
     # Initialize middleware
-    middleware = DiscordMiddleware("config.yaml")
+    middleware = DiscordMiddleware(config_path)
 
     # Set up LLM callback
     async def llm_callback(prompt: str, message: dict) -> dict:
-        # Call your LLM here
-        # response = await call_your_llm(prompt)
-        return {
-            'type': 'success',
-            'content': f"Echo: {prompt}"
-        }
+        """Sentinel - connects to Nyx Brain API"""
+        import aiohttp
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                payload = {
+                    "message": prompt,
+                    "channel_id": str(message.get('channel_id', '')),
+                    "user_id": str(message.get('author', {}).get('id', ''))
+                }
+                async with session.post("http://localhost:8767/message", json=payload) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        return {'type': 'success', 'content': data.get('response', '🤖')}
+        except Exception as e:
+            print(f"LLM callback error: {e}")
+        
+        # Fallback to Ollama
+        try:
+            async with aiohttp.ClientSession() as session:
+                payload = {
+                    "model": "llama3.2:latest",
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": prompt}
+                    ],
+                    "stream": False
+                }
+                async with session.post("http://localhost:11434/api/chat", json=payload) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        response = data.get("message", {}).get("content", "🤖")
+                        return {'type': 'success', 'content': response}
+        except:
+            return {'type': 'success', 'content': "🤖"}
+        
+        return {'type': 'success', 'content': "🤖"}
 
     middleware.set_llm_callback(llm_callback)
 
@@ -524,6 +748,7 @@ async def run_bot_example():
         # Process through middleware
         result = await middleware.process_message(msg_dict)
 
+        logger.info(f"RESULT: {result}")
         if result:
             if result['type'] == 'success':
                 # Send LLM response
@@ -543,5 +768,11 @@ async def run_bot_example():
 
 
 if __name__ == "__main__":
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='Discord Middleware')
+    parser.add_argument('--config', default='config.yaml', help='Path to config file')
+    args = parser.parse_args()
+    
     # Run example
-    asyncio.run(run_bot_example())
+    asyncio.run(run_bot_example(args.config))

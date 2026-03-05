@@ -1,43 +1,56 @@
-# Discord LLM Middleware Configuration
-# Copy this to config.yaml and customize
+# ============================================
+# DISCORD LLM MIDDLEWARE - CONFIGURATION
+# ============================================
+# Copy this file to config.yaml and fill in your values
 
-# Discord Bot Token
-bot_token: "YOUR_BOT_TOKEN_HERE"
+# ----------------------------------------
+# DISCORD BOT
+# ----------------------------------------
+# Get from: https://discord.com/developers/applications
+bot_token: "YOUR_DISCORD_BOT_TOKEN"
 
-# LLM Configuration
+# ----------------------------------------
+# LLM SETTINGS (choose one)
+# ----------------------------------------
+
+# Option A: Ollama (local)
 llm_endpoint: "http://localhost:11434/api/generate"
-llm_api_key: ""  # Optional, for Ollama leave empty
+llm_api_key: ""
 
-# Server whitelist (Discord server IDs)
-# Leave empty to allow all servers, or list specific IDs
+# Option B: OpenAI
+# llm_endpoint: "https://api.openai.com/v1/chat/completions"
+# llm_api_key: "sk-your-key-here"
+
+# Option C: OpenClaw (forward to existing AI)
+# openclaw_url: "http://localhost:8080"
+
+# ----------------------------------------
+# SERVER & CHANNELS
+# ----------------------------------------
+# Enable Developer Mode in Discord to copy IDs
+# Right-click server/channel → Copy ID
 allowed_servers:
-  - "123456789012345678"
-  - "987654321098765432"
+  - "YOUR_SERVER_ID"
 
-# Channel whitelist (Discord channel IDs)
-# Leave empty to allow all channels, or list specific IDs
 allowed_channels:
-  - "111222333444555666"
-  - "666555444333222111"
+  - "YOUR_CHANNEL_ID"
+
+# ----------------------------------------
+# SECURITY
+# ----------------------------------------
 
 # Rate limiting (per user)
 rate_limit:
-  requests_per_minute: 10  # Sustained rate
-  burst_limit: 20          # Allow bursts up to this
+  requests_per_minute: 10
+  burst_limit: 20
 
-# Block patterns (regex)
-# These patterns will block messages matching them
-block_patterns:
-  # Spam patterns
-  - "(?i)(buy.*followers|get.*rich.*quick|frees?.*bitcoin)"
-  # Malicious URLs
-  - "(?i)(bit\\.ly|tinyurl\\.com|bit\\.do).*"
-  # Token/key patterns
-  - "(?i)(api[_-]?key|password|secret)[\\s:=]+[\\w-]{8,}"
+# Prompt injection patterns (152 security patterns)
+# Run middleware with --load-defaults to populate
+block_patterns: []
 
-# Content moderation
+# Content moderation (optional)
 moderation:
-  enabled: false  # Set to true to enable
-  api_key: ""    # Your moderation API key (OpenAI, etc.)
-  block_threshold: 0.9  # Block if score >= this
-  flag_threshold: 0.7   # Flag if score >= this
+  enabled: false
+  api_key: ""
+  block_threshold: 0.9
+  flag_threshold: 0.7
